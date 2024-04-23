@@ -1,0 +1,7 @@
+{
+    "@@locale": "pt",
+    "helloWorld": "Olá mundo, from ARB!",
+    "@helloWorld": {
+        "description": "A saudação convencional do programador ao iniciar em uma nova tecnologia"
+    }
+}
