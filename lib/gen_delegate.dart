@@ -14,43 +14,12 @@ Future<void> generateDelegateFile() async {
   final List<String> generatedClasses = [];
   final List<String> generatedLocales = [];
 
-  for (var arbFile in arbFiles) {
-    final content = await File(arbFile.path).readAsString();
-    final jsonFormattedContent = jsonDecode(content);
-    final String locale = jsonFormattedContent["@@locale"];
-    generatedLocales.add(locale);
-    final List<MapEntry<String, dynamic>> entries = [];
-
-    for (var key in jsonFormattedContent.keys) {
-      if (key[0] != "@") {
-        entries.add(MapEntry(key, jsonFormattedContent[key]));
-      }
-    }
-
-    final buffer = StringBuffer(
-      'import "package:flutter_gen/gen_l10n/app_localizations.dart";',
-    );
-
-    buffer.writeln('');
-    final className = "Memory${locale.toUpperCase()}Localization";
-    generatedClasses.add(className);
-    buffer.writeln('class $className extends AppLocalizations {');
-    buffer.writeln('$className(super.locale, {required this.data});');
-    buffer.writeln('');
-    buffer.writeln('final Map<String, dynamic> data;');
-    buffer.writeln('');
-
-    for (var entry in entries) {
-      buffer.writeln("@override");
-      buffer.writeln("String get ${entry.key} => data['${entry.key}'];");
-    }
-
-    buffer.writeln('}');
-    final path = p.absolute("memory_${locale}_localization.dart");
-    generatedFiles.add("./memory_${locale}_localization.dart");
-    final localizationFile = await File(path).create();
-    await localizationFile.writeAsString(buffer.toString());
-  }
+  await _generateMemoryLocalizations(
+    arbFiles,
+    generatedLocales,
+    generatedClasses,
+    generatedFiles,
+  );
 
   final delegateFile = await File(p.absolute("memory_delegate.dart")).create();
 
@@ -164,6 +133,78 @@ Future<void> generateDelegateFile() async {
   buffer.writeln('}');
 
   await delegateFile.writeAsString(buffer.toString());
+}
+
+Future<void> _generateMemoryLocalizations(
+  Iterable<FileSystemEntity> arbFiles,
+  List<String> generatedLocales,
+  List<String> generatedClasses,
+  List<String> generatedFiles,
+) async {
+  for (var arbFile in arbFiles) {
+    final content = await File(arbFile.path).readAsString();
+    final jsonFormattedContent = jsonDecode(content);
+    final String locale = jsonFormattedContent["@@locale"];
+    generatedLocales.add(locale);
+    final List<MapEntry<String, dynamic>> entries = [];
+    final List<MapEntry<String, dynamic>> translationParams = [];
+
+    for (String key in jsonFormattedContent.keys) {
+      if (key[0] != "@") {
+        entries.add(MapEntry(key, jsonFormattedContent[key]));
+      } else if (key.startsWith("@") && key[1] != "@") {
+        translationParams.add(MapEntry(key, jsonFormattedContent[key]));
+      }
+    }
+
+    final buffer = StringBuffer(
+      'import "package:flutter_gen/gen_l10n/app_localizations.dart";',
+    );
+
+    buffer.writeln('');
+    final className = "Memory${locale.toUpperCase()}Localization";
+    generatedClasses.add(className);
+    buffer.writeln('class $className extends AppLocalizations {');
+    buffer.writeln('$className(super.locale, {required this.data});');
+    buffer.writeln('');
+    buffer.writeln('final Map<String, dynamic> data;');
+    buffer.writeln('');
+
+    for (var entry in entries) {
+      buffer.writeln("@override");
+      if (translationParams.any((element) => element.key == "@${entry.key}")) {
+        final Map<String, String> placeholders = {};
+        for (var param in translationParams) {
+          if (param.key == "@${entry.key}") {
+            for (var placeholder in param.value["placeholders"].keys) {
+              placeholders[placeholder] =
+                  param.value["placeholders"][placeholder]["type"];
+            }
+          }
+        }
+
+        final String params =
+            placeholders.entries.map((e) => "${e.value} ${e.key}").join(", ");
+        buffer.writeln("String ${entry.key} ($params) => data['${entry.key}']");
+        for (var entry in placeholders.entries) {
+          buffer.writeln(
+              "    .replaceAll('{${entry.key}}', ${entry.key}.toString())");
+        }
+        buffer.writeln(";");
+        // buffer.writeln("String get ${entry.key} => data['@${entry.key}'];");
+        translationParams
+            .removeWhere((element) => element.key == "@${entry.key}");
+      } else {
+        buffer.writeln("String get ${entry.key} => data['${entry.key}'];");
+      }
+    }
+
+    buffer.writeln('}');
+    final path = p.absolute("memory_${locale}_localization.dart");
+    generatedFiles.add("./memory_${locale}_localization.dart");
+    final localizationFile = await File(path).create();
+    await localizationFile.writeAsString(buffer.toString());
+  }
 }
 
 void main() async {

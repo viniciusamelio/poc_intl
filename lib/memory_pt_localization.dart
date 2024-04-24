@@ -5,5 +5,10 @@ MemoryPTLocalization(super.locale, {required this.data});
 final Map<String, dynamic> data;
 
 @override
-String get helloWorld => data['helloWorld'];
+String helloWorld (String name, int age) => data['helloWorld']
+    .replaceAll('{name}', name.toString())
+    .replaceAll('{age}', age.toString())
+;
+@override
+String get appTitle => data['appTitle'];
 }

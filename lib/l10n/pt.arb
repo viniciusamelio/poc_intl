@@ -1,7 +1,18 @@
 {
     "@@locale": "pt",
-    "helloWorld": "Olá mundo, from ARB!",
+    "helloWorld": "Hello, {name}, you're {age} years old",
     "@helloWorld": {
-        "description": "A saudação convencional do programador ao iniciar em uma nova tecnologia"
-    }
+        "description": "A saudação convencional do programador ao iniciar em uma nova tecnologia",
+        "placeholders": {
+            "name" : {
+                "description": "O nome do usuário",
+                "type": "String"
+            },
+            "age" : {
+                "description": "A idade do usuário",
+                "type": "int"
+            }
+        }
+    },
+    "appTitle" : "INTL Poc App"
 }
